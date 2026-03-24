@@ -3,14 +3,18 @@
   "version": "0.0.12",
   "description": "MSM Smart Tools - DaDa:bit + WonderCam - blocs pedagogiques MSM MEDIAS",
   "license": "MIT",
+  "author": "MSM MEDIAS",
   "dependencies": {
     "core": "*",
-    "microbit": "*",
     "dadabit": "github:hiwonder/DaDabit",
-    "wondercam": "github:Hiwonder/WonderCam"
+    "WonderCam": "github:Hiwonder/WonderCam"
   },
   "files": [
     "main.ts"
   ],
+  "supportedTargets": [
+    "microbit"
+  ],
+  "preferredEditor": "blocksprj",
   "public": true
 }
