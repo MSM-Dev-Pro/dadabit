@@ -11,7 +11,7 @@
  */
 
 //% color=#0EA5E9 icon="\uf02d" block="MSM Smart Tools"
-//% groups='["Init","Réglages","Capteurs ligne","Mouvements","Suivi de ligne","Vision (couleur)","Bras & Pince","Mission"]'
+//% groups='["Init","Réglages","Capteurs ligne","Mouvements","Suivi de ligne","Vision (couleur)","Vision (chiffres)","Bras & Pince","Mission"]'
 namespace msmSmartTools {
 
     // =========================================================
@@ -27,7 +27,7 @@ namespace msmSmartTools {
     let vitesseCorrection = 44
     let petiteVitesse = 33
 
-    // vision (réglages communs)
+    // vision couleur
     let ID_CUBE = 1
     let X_MIN = 80
     let X_MAX = 240
@@ -39,6 +39,11 @@ namespace msmSmartTools {
     let compteurStableV = 0
     let compteurStableB = 0
     let compteurStableJ = 0
+
+    // vision chiffres
+    let confianceMinNombre = 0.4
+    let dernierNombre = 0
+    let compteurNombreStable = 0
 
     // bras/pince classique (servos 5 et 6)
     let BRAS_HAUT = -60
@@ -64,6 +69,11 @@ namespace msmSmartTools {
         compteurStableV = 0
         compteurStableB = 0
         compteurStableJ = 0
+    }
+
+    function resetNombres(): void {
+        dernierNombre = 0
+        compteurNombreStable = 0
     }
 
     function xDansFenetre(id: number): boolean {
@@ -109,6 +119,32 @@ namespace msmSmartTools {
         }
     }
 
+    function nombreValideEtStableInterne(n: number, seuil: number): boolean {
+        if (confianceNombre() >= confianceMinNombre) {
+            let lu = nombreReconnu()
+
+            if (lu == n) {
+                if (dernierNombre == n) {
+                    compteurNombreStable += 1
+                } else {
+                    dernierNombre = n
+                    compteurNombreStable = 1
+                }
+
+                if (compteurNombreStable >= seuil) {
+                    resetNombres()
+                    return true
+                }
+            } else {
+                resetNombres()
+            }
+        } else {
+            resetNombres()
+        }
+
+        return false
+    }
+
     // =========================================================
     // INIT
     // =========================================================
@@ -122,7 +158,22 @@ namespace msmSmartTools {
         brasAuRepos()
         basic.pause(500)
         resetStabilites()
+        resetNombres()
         modeMission = 0
+    }
+
+    //% block="activer la reconnaissance des couleurs"
+    //% group="Init"
+    export function activerReconnaissanceCouleurs(): void {
+        wondercam.ChangeFunc(wondercam.Functions.ColorDetect)
+        resetStabilites()
+    }
+
+    //% block="activer la reconnaissance des chiffres"
+    //% group="Init"
+    export function activerReconnaissanceChiffres(): void {
+        wondercam.ChangeFunc(wondercam.Functions.NumberRecognition)
+        resetNombres()
     }
 
     // =========================================================
@@ -146,6 +197,12 @@ namespace msmSmartTools {
         Y_APPROCHE = y
         SEUIL_VALIDATION = seuil
         resetStabilites()
+    }
+
+    //% block="régler confiance mini du nombre à %c"
+    //% group="Réglages"
+    export function reglerConfianceMiniNombre(c: number): void {
+        confianceMinNombre = c
     }
 
     //% block="régler bras/pince | bras haut %bh | bras bas %bb | pince ouverte %po | pince fermée %pf"
@@ -175,6 +232,7 @@ namespace msmSmartTools {
     export function resetMission(): void {
         modeMission = 0
         resetStabilites()
+        resetNombres()
     }
 
     // =========================================================
@@ -193,6 +251,10 @@ namespace msmSmartTools {
     //% group="Réglages"
     export function SEUIL_VALIDATION_get(): number { return SEUIL_VALIDATION }
 
+    //% block="confiance mini nombre"
+    //% group="Réglages"
+    export function confianceMiniNombre_get(): number { return confianceMinNombre }
+
     // =========================================================
     // CAPTEURS LIGNE
     // =========================================================
@@ -200,10 +262,10 @@ namespace msmSmartTools {
     //% block="mettre à jour les capteurs de ligne"
     //% group="Capteurs ligne"
     export function mettreAJourCapteursLigne(): void {
-        capteur1 = dadabit.line_followers(dadabit.LineFollowerSensors.S1, dadabit.TrackbitType.State_1)
-        capteur2 = dadabit.line_followers(dadabit.LineFollowerSensors.S2, dadabit.TrackbitType.State_1)
-        capteur3 = dadabit.line_followers(dadabit.LineFollowerSensors.S3, dadabit.TrackbitType.State_1)
-        capteur4 = dadabit.line_followers(dadabit.LineFollowerSensors.S4, dadabit.TrackbitType.State_1)
+        capteur1 = dadabit.line_followers(dadabit.LineFollowerSensors.S1, dadabit.LineColor.Black)
+        capteur2 = dadabit.line_followers(dadabit.LineFollowerSensors.S2, dadabit.LineColor.Black)
+        capteur3 = dadabit.line_followers(dadabit.LineFollowerSensors.S3, dadabit.LineColor.Black)
+        capteur4 = dadabit.line_followers(dadabit.LineFollowerSensors.S4, dadabit.LineColor.Black)
     }
 
     //% block="arrivée détectée ? (S1 S2 S3 S4 sur noir)"
@@ -288,6 +350,8 @@ namespace msmSmartTools {
             corrigerAGauche(vitesseToutDroit)
         } else if (capteur4 && !capteur1 && (!capteur2 && !capteur3)) {
             corrigerADroite(vitesseToutDroit)
+        } else {
+            avancer(petiteVitesse)
         }
     }
 
@@ -392,6 +456,82 @@ namespace msmSmartTools {
     //% group="Vision (couleur)"
     export function approcherCube(): void {
         approcherId(ID_CUBE)
+    }
+
+    // =========================================================
+    // VISION (chiffres)
+    // =========================================================
+
+    //% block="nombre reconnu"
+    //% group="Vision (chiffres)"
+    export function nombreReconnu(): number {
+        return wondercam.NumberWithMaxConfidence()
+    }
+
+    //% block="confiance du nombre"
+    //% group="Vision (chiffres)"
+    export function confianceNombre(): number {
+        return wondercam.MaxConfidenceOfNumber()
+    }
+
+    //% block="nombre %n détecté ?"
+    //% group="Vision (chiffres)"
+    export function nombreDetecte(n: number): boolean {
+        return confianceNombre() >= confianceMinNombre && nombreReconnu() == n
+    }
+
+    //% block="nombre %n détecté de façon stable ? seuil %seuil"
+    //% group="Vision (chiffres)"
+    export function nombreStable(n: number, seuil: number): boolean {
+        return nombreValideEtStableInterne(n, seuil)
+    }
+
+    //% block="attendre le nombre %n stable seuil %seuil"
+    //% group="Vision (chiffres)"
+    export function attendreNombreStable(n: number, seuil: number): void {
+        resetNombres()
+        while (true) {
+            mettreAJourCamera()
+            if (nombreValideEtStableInterne(n, seuil)) {
+                break
+            }
+            basic.pause(50)
+        }
+    }
+
+    //% block="attendre le chiffre 1 ou 2 stable seuil %seuil"
+    //% group="Vision (chiffres)"
+    export function attendreUnOuDeuxStable(seuil: number): number {
+        resetNombres()
+        while (true) {
+            mettreAJourCamera()
+
+            if (confianceNombre() >= confianceMinNombre) {
+                let n = nombreReconnu()
+
+                if (n == 1 || n == 2) {
+                    if (n == dernierNombre) {
+                        compteurNombreStable += 1
+                    } else {
+                        dernierNombre = n
+                        compteurNombreStable = 1
+                    }
+
+                    if (compteurNombreStable >= seuil) {
+                        let resultat = n
+                        resetNombres()
+                        return resultat
+                    }
+                } else {
+                    resetNombres()
+                }
+            } else {
+                resetNombres()
+            }
+
+            basic.pause(50)
+        }
+        return 0
     }
 
     // =========================================================
