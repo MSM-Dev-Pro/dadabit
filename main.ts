@@ -216,10 +216,10 @@ namespace msmSmartTools {
     //% block="mettre à jour les capteurs de ligne"
     //% group="Capteurs ligne"
     export function mettreAJourCapteursLigne(): void {
-        capteur1 = dadabit.line_followers(dadabit.LineFollowerSensors.S1, dadabit.TrackbitType.State_1)
-        capteur2 = dadabit.line_followers(dadabit.LineFollowerSensors.S2, dadabit.TrackbitType.State_1)
-        capteur3 = dadabit.line_followers(dadabit.LineFollowerSensors.S3, dadabit.TrackbitType.State_1)
-        capteur4 = dadabit.line_followers(dadabit.LineFollowerSensors.S4, dadabit.TrackbitType.State_1)
+        capteur1 = dadabit.line_followers(dadabit.LineFollowerSensors.S1, dadabit.TrackbitType.State_0)
+        capteur2 = dadabit.line_followers(dadabit.LineFollowerSensors.S2, dadabit.TrackbitType.State_0)
+        capteur3 = dadabit.line_followers(dadabit.LineFollowerSensors.S3, dadabit.TrackbitType.State_0)
+        capteur4 = dadabit.line_followers(dadabit.LineFollowerSensors.S4, dadabit.TrackbitType.State_0)
     }
 
     //% block="arrivée détectée ? (S1 S2 S3 S4 sur noir)"
