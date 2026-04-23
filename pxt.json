@@ -6,7 +6,7 @@
   "author": "MSM MEDIAS",
   "dependencies": {
     "core": "*",
-    "dadabit": "github:hiwonder/DaDabit",
+    "dadabit": "github:hiwonder/DaDabit#8e15d43",
     "WonderCam": "github:Hiwonder/WonderCam"
   },
   "files": [
